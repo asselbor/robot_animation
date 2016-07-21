@@ -1,0 +1,18 @@
+<launch>
+
+  <arg name="nao_ip" default="10.0.0.10" />
+  <arg name="nao_port" default="9559" />
+  <arg name="topic_animations" default="topic_animations" />
+  <arg name="topic_activity" default="state_activity" />
+  <arg name="frequecyAnimation" default="0.03" />
+  <arg name="frequecyUpdat" default="100" />
+
+
+  <node pkg="robot_interaction" type="animations_generator.py" name="animations_generator">
+  </node>
+
+  <node pkg="robot_interaction" type="idle_pose_generation.py" name="idle_pose_generation">
+  </node>
+
+
+</launch>
