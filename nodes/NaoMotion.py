@@ -18,13 +18,13 @@ from animations.backRubs_pose import *
 from animations.relaxation_pose import *
 from animations.rest_pose import *
 
+from BSI import *
 from naoqi import ALProxy
 import random
-from BSI import *
 
 ampBreath = 10.0
 bpm = 20.0
-
+states = {"normal": [4, 5, 7, 12, 13, 14], "impatient": [0, 1, 2, 6, 8, 9], "happy": [10, 11], "sad": [3]}
 
 class NaoMotion():
 
@@ -75,14 +75,15 @@ class NaoMotion():
 		# control robot posture in order to avoid animation if the robot in crouched
 		self.control_posture()
 
-		# randomly select an animation 
-		allState = [0, 1, 2, 3, 4, 5, 6, 7, 8 ,9 ,10 ,11 ,12 ,13 ,14]
+		# get the mood that the robot should have
+		mood = cBSI.get_mood()
+		allStates = states[mood]
 
 		# remove last state in order to avoid same animation twice in a row
-		allState.remove(self.lastAnimation)
+		#allState.remove(self.lastAnimation)
 
 		#randomly select one state
-		randomState = random.choice(allState)
+		randomState = random.choice(allStates)
 
 		# update last state parameter
 		self.lastAnimation = randomState

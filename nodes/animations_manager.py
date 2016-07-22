@@ -32,15 +32,27 @@ def callback_activityRobot(data):
         # the robot is not busy anymore
         robotBusy = False
 
-        # launch timer that will triger animations at a certain frequency given in param
-        launch_timer()
+        #init CBSI time
+        cBSI.init_time_interaction()
 
-    elif str(data.data) == "PUBLISHING_WORD":
+        # launch timer to update BSI mood
+        timerUpdateBSI = rospy.Timer(rospy.Duration(0.1), callback_updateBSI)
+
+        # launch timer that will triger animations at a certain frequency given in param
+        timerLaunchAnimation = rospy.Timer(rospy.Duration(periodAnimation), callback_timer_animation)
+
+
+    # @TODO change that to try catch or put error
+    else:
         # the robot is busy (doing a task)
         robotBusy = True
 
-    else:
-        robotBusy = True
+        try:
+            timerLaunchAnimation.shutdown()
+            timerUpdateBSI.shutdown()
+        except:
+            pass
+
 
 def callback_animations(data):
 
@@ -54,19 +66,19 @@ def callback_poses(data):
     # posture -> only use by teleOp, idle mode cannot launch the posture animation
     if state == 0:
         # go to init pose
-        cAnimation.stand_init()
+        cNaoMotion.stand_init()
 
     elif state == 1:
         # go to crouch pose
-        cAnimation.sit_down()
+        cNaoMotion.sit_down()
 
     elif state == 2:
         # start breathing
-        cAnimation.start_breathing()
+        cNaoMotion.start_breathing()
 
     elif state == 3:
         # stop breathing
-        cAnimation.stop_breathing()
+        cNaoMotion.stop_breathing()
 
 def callback_settings(data):
 
@@ -74,11 +86,11 @@ def callback_settings(data):
     global robotBusy
     state = data.data
 
-    if state == -1:
+    if state == 0:
         robotBusy = False
 
-    elif state >= 0 and state  <= 10:
-        parkinson_scale = state
+    if state == 1:
+        launch_timer()
 
 def callback_user_feedback(data):
 
@@ -88,17 +100,13 @@ def callback_user_feedback(data):
     elif data.data == "-":
         cBSI.set_mood("sad")
 
+def callback_timer_animation(event):
+    if robotBusy == False:
+        cNaoMotion.launch_animation(cBSI)
 
-
-def launch_timer():
-  
-  # launch an animation
-  if robotBusy == False:
-    cNaoMotion.launch_animation(cBSI)
-
-    # relaunch the timer
-    threading.Timer(periodAnimation, launch_timer).start()
-
+def callback_updateBSI(event):
+    cBSI.update_mood(event.last_duration)
+ 
 
 if __name__ == "__main__":
 
@@ -134,9 +142,10 @@ if __name__ == "__main__":
     # subscribe to topic regarding the state machine
     rospy.Subscriber(TOPIC_ACTIVITY, String, callback_activityRobot)
 
+
+
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
-
 
 
 
