@@ -14,9 +14,6 @@ from NaoMotion import *
 from BSI import *
 
 
-# period (in seconds) at which animation are launched 
-# @TODO in NAOMOTION ???
-periodAnimation = 10.0
 # global variable telling if the robot is busy or not
 robotBusy = True
 
@@ -36,13 +33,11 @@ def callback_activityRobot(data):
         cBSI.init_time_interaction()
 
         # launch timer to update BSI mood
-        timerUpdateBSI = rospy.Timer(rospy.Duration(0.1), callback_updateBSI)
+        timerUpdateBSI = rospy.Timer(rospy.Duration(periodUpdateTimerBSI), callback_updateBSI)
 
         # launch timer that will triger animations at a certain frequency given in param
-        timerLaunchAnimation = rospy.Timer(rospy.Duration(periodAnimation), callback_timer_animation)
+        timerLaunchAnimation = rospy.Timer(rospy.Duration(cBSI.periodAnimation), callback_timer_animation, oneshot=True)
 
-
-    # @TODO change that to try catch or put error
     else:
         # the robot is busy (doing a task)
         robotBusy = True
@@ -53,9 +48,9 @@ def callback_activityRobot(data):
         except:
             pass
 
-
 def callback_animations(data):
 
+    # from the TELE_OP only
     # launch nao animation given in the topic
     cNaoMotion.launch(data.data)
 
@@ -84,13 +79,18 @@ def callback_settings(data):
 
     global parkinson_scale
     global robotBusy
+
     state = data.data
 
     if state == 0:
         robotBusy = False
 
     if state == 1:
-        launch_timer()
+        # launch timer to update BSI mood
+        timerUpdateBSI = rospy.Timer(rospy.Duration(periodUpdateTimerBSI), callback_updateBSI)
+
+        # launch timer that will triger animations at a cerxtain frequency given in param
+        timerLaunchAnimation = rospy.Timer(rospy.Duration(cBSI.periodAnimation), callback_timer_animation, oneshot=True)
 
 def callback_user_feedback(data):
 
@@ -104,8 +104,11 @@ def callback_timer_animation(event):
     if robotBusy == False:
         cNaoMotion.launch_animation(cBSI)
 
+        # update timer frequency and relaunch it
+        timerLaunchAnimation = rospy.Timer(rospy.Duration(cBSI.periodAnimation), callback_timer_animation, oneshot=True)
+
 def callback_updateBSI(event):
-    cBSI.update_mood(event.last_duration)
+    cBSI.update_mood(event.current_expected, event.last_expected)
  
 
 if __name__ == "__main__":
@@ -126,12 +129,14 @@ if __name__ == "__main__":
 
     # initial frequency at which animations are launch
     periodAnimation = float(rospy.get_param('~periodAnimation', '10'))
+    periodAnimationMax = float(rospy.get_param('~periodAnimationMax', '10'))
+    periodUpdateTimerBSI = float(rospy.get_param('~periodUpdateTimerBSI', '0.1'))
 
     # create animation class that will launch the animations
     cNaoMotion = NaoMotion(NAO_IP, int(PORT))
 
     # create the BSI class that will contain the behavior that the robot needs to show
-    cBSI = BSI()
+    cBSI = BSI(periodAnimation, periodAnimationMax)
 
     # subscribe to topics that send animations, poses and settings orders
     rospy.Subscriber(TOPIC_ANIMATIONS, UInt8, callback_animations)
@@ -141,8 +146,6 @@ if __name__ == "__main__":
 
     # subscribe to topic regarding the state machine
     rospy.Subscriber(TOPIC_ACTIVITY, String, callback_activityRobot)
-
-
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

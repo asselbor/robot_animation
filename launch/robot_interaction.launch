@@ -3,7 +3,9 @@
   <arg name="nao_ip" default="10.0.0.10" />
   <arg name="nao_port" default="9559" />
   
-  <arg name="periodAnimation" default="30" />
+  <arg name="periodAnimation" default="60" />
+  <arg name="periodAnimationMax" default="30" />
+  <arg name="periodUpdateTimerBSI" default="0.1" />  
 
   <arg name="topic_animations" default="topic_animations" />
   <arg name="topic_settings" default="topic_settings" />
