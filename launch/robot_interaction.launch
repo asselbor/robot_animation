@@ -3,16 +3,16 @@
   <arg name="nao_ip" default="10.0.0.10" />
   <arg name="nao_port" default="9559" />
   
-  <arg name="periodAnimation" default="60" />
-  <arg name="periodAnimationMax" default="30" />
-  <arg name="periodUpdateTimerBSI" default="0.1" />  
+  <arg name="periodAnimation" value="60" />
+  <arg name="periodAnimationMax" value="30" />
+  <arg name="periodUpdateTimerBSI" value="0.1" />  
 
-  <arg name="topic_animations" default="topic_animations" />
-  <arg name="topic_settings" default="topic_settings" />
-  <arg name="topic_poses" default="topic_poses" />
-  <arg name="topic_activity" default="state_activity" />
-  <arg name="topic_user_feedback" default="user_feedback" />
-  <arg name="topic_nb_repetition" default="nb_repetition" />
+  <arg name="topic_animations" value="topic_animations" />
+  <arg name="topic_settings" value="topic_settings" />
+  <arg name="topic_poses" value="topic_poses" />
+  <arg name="topic_activity" value="state_activity" />
+  <arg name="topic_user_feedback" value="user_feedback" />
+  <arg name="topic_nb_repetition" value="nb_repetition" />
 
 
   <node pkg="robot_interaction" type="animations_manager.py" name="animations_manager">
