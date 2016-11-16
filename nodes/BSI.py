@@ -7,56 +7,54 @@
 ## the modifications that need to be bring to the style_filter node 
 #########################################################################################
 
-import threading
 import math
 
-
-# possible states for the moment:
-# normal, sad, happy, impatient
-NB_SECOND_IMPATIENCE = 80
-NB_SECOND_TIRED = 160
-NB_SECOND_SLEEP = 240
-
 class BSI():
+	def __init__(self, parkinsonScale):
 
-	def __init__(self, periodAnimationInit, periodAnimationMax):
-		self.mood = "normal"
+		self.parkinsonScale = parkinsonScale
+		self.mood = list()
+		self.speedAnimation = 1.0
+		self.amplitudeAnimation = 1.0
 		self.timeSinceLastInteraction = 0
-		self.periodAnimationInit = periodAnimationInit
-		self.periodAnimation = periodAnimationInit
-		self.periodAnimationMax = periodAnimationMax
+		self.ampBreath = 1
+		self.bpm = 30.0
+		self.breathEnable = False
+		self.periodAnimation = None
+		self.faceTracking = True
+		self.mood.append("low")
 
+		# line equation of bpm/amp => bpm = 30 - 25*amp. amp [0, 1]; bpm [0, 30]
+		if self.parkinsonScale == 2:
+			self.mood.append("low")
+			self.periodAnimation = 25
+			self.breathEnable = True
+			self.ampBreath = 0.8
+			self.bpm = 10.0
+		
+		elif self.parkinsonScale == 3:
+			self.mood.append("low")
+			self.mood.append("medium")
+			self.periodAnimation = 18
+			self.breathEnable = True
+			self.ampBreath = 0.6
+			self.bpm = 15.0
+		
+		elif self.parkinsonScale == 4:
+			self.mood.append("medium")
+			self.periodAnimation = 12
+			self.breathEnable = True
+			self.ampBreath = 0.4
+			self.bpm = 20.0	
 
-	def set_mood(self, new_mood):
-		self.mood = new_mood
+	def get_speed_animation(self):
+		return self.speedAnimation
 
-	def get_mood(self):
-		return self.mood
-
-	def update_mood(self, time_now, time_previous):
-		if time_previous != None:
-			self.timeSinceLastInteraction += (time_now - time_previous).to_sec()
-			
-			# calculate the new period of animation
-			self.updateFrequencyAnimation()
-
-		if self.timeSinceLastInteraction > NB_SECOND_IMPATIENCE:
-			self.mood = "impatient"
-
-		if self.timeSinceLastInteraction > NB_SECOND_TIRED:
-			self.mood = "tired"
-
-		if self.timeSinceLastInteraction > NB_SECOND_SLEEP:
-			self.mood = "sleep"
+	def get_amplitude_animation(self):
+		return self.amplitudeAnimation
 
 	def init_time_interaction(self):
 		self.timeSinceLastInteraction = 0
-		self.mood = "normal"
 
-	def updateFrequencyAnimation(self):
-
-		# slope of period decrease
-		paramSpeed = 0.005
-
-		# calculate the new period of animation
-		self.periodAnimation = self.periodAnimationMax/(1 + (self.periodAnimationMax/float(self.periodAnimationInit) - 1)*math.exp(-paramSpeed*self.timeSinceLastInteraction))
+	def get_mood(self):
+		return self.mood

@@ -18,50 +18,21 @@ from BSI import *
 robotBusy = True
 
 
-def callback_activityRobot(data):
-    global robotBusy
-    if str(data.data) == "WAITING_FOR_FEEDBACK":
-        if cNaoMotion.get_posture() == "Crouch":
-            # the robot needs to stand up in order to launch animations
-            cNaoMotion.stand_init()
-            cNaoMotion.start_breathing()
-
-        # the robot is not busy anymore
-        robotBusy = False
-
-        #init CBSI time
-        cBSI.init_time_interaction()
-
-        # launch timer to update BSI mood
-        timerUpdateBSI = rospy.Timer(rospy.Duration(periodUpdateTimerBSI), callback_updateBSI)
-
-        # launch timer that will triger animations at a certain frequency given in param
-        timerLaunchAnimation = rospy.Timer(rospy.Duration(cBSI.periodAnimation), callback_timer_animation, oneshot=True)
-
-    else:
-        # the robot is busy (doing a task)
-        robotBusy = True
-
-        try:
-            timerLaunchAnimation.shutdown()
-            timerUpdateBSI.shutdown()
-        except:
-            pass
-
-def callback_animations(data):
+########################################## teleOp call back only ##########################################
+def TOp_callback_animations(data):
 
     # from the TELE_OP only
     # launch nao animation given in the topic
-    cNaoMotion.launch(data.data)
+    cNaoMotion.launchAnimation(data.data)
 
-def callback_poses(data):
+def TOp_callback_poses(data):
 
     state = data.data
 
     # posture -> only use by teleOp, idle mode cannot launch the posture animation
     if state == 0:
         # go to init pose
-        cNaoMotion.stand_init()
+        cNaoMotion.stand()
 
     elif state == 1:
         # go to crouch pose
@@ -75,7 +46,7 @@ def callback_poses(data):
         # stop breathing
         cNaoMotion.stop_breathing()
 
-def callback_settings(data):
+def TOp_callback_settings(data):
 
     global parkinson_scale
     global robotBusy
@@ -86,29 +57,75 @@ def callback_settings(data):
         robotBusy = False
 
     if state == 1:
-        # launch timer to update BSI mood
-        timerUpdateBSI = rospy.Timer(rospy.Duration(periodUpdateTimerBSI), callback_updateBSI)
 
         # launch timer that will triger animations at a cerxtain frequency given in param
         timerLaunchAnimation = rospy.Timer(rospy.Duration(cBSI.periodAnimation), callback_timer_animation, oneshot=True)
+########################################## ##################### ##########################################
 
-def callback_user_feedback(data):
+def callback_activityRobot(data):
+  
+    state = str(data.data)
+    global robotBusy
 
-    if data.data == "+":
-        cBSI.set_mood("happy")
-        
-    elif data.data == "-":
-        cBSI.set_mood("sad")
+    # if state == "INTRODUCTION" or state == "WAITING_FOR_WORD":
+    #     if cNaoMotion.get_posture() == "Crouch":
+    #         # the robot needs to stand up in order to launch animations
+    #         cNaoMotion.stand()
+
+    #     # wait until the robot stops moving
+    #     while cNaoMotion.isMoving():
+    #         rospy.sleep(0.1)
+
+    #     # make the robot introduce himself
+    #     cNaoMotion.introduceHimself()
+
+    if state == "WAITING_FOR_FEEDBACK" or state == "WAITING_FOR_WORD":
+        if cNaoMotion.get_posture() == "Crouch":
+            # the robot needs to stand up in order to launch animations
+            cNaoMotion.stand()
+
+        # make nao breath
+        cNaoMotion.breath(cBSI)
+
+        # face tracking
+        cNaoMotion.faceFolowing(cBSI.faceTracking)
+
+        if cBSI.periodAnimation != None:
+            # the robot is not busy anymore
+            robotBusy = False
+
+            #init CBSI time
+            cBSI.init_time_interaction()
+
+            # launch timer that will triger animations at a certain frequency given in param
+            try:
+                timerLaunchAnimation.shutdown()
+            except:
+                pass
+            timerLaunchAnimation = rospy.Timer(rospy.Duration(cBSI.periodAnimation), callback_timer_animation, oneshot=True)
+
+    elif state == "PUBLISHING_WORD":
+        # the robot is busy (doing a task)
+        robotBusy = True
+
+        # stop animation timer
+        try:
+            timerLaunchAnimation.shutdown()
+        except:
+            pass
+
+        cNaoMotion.stand()
+
 
 def callback_timer_animation(event):
+
+    global timerLaunchAnimation
     if robotBusy == False:
-        cNaoMotion.launch_animation(cBSI)
+        cNaoMotion.nonFunctionalMove(cBSI)
 
         # update timer frequency and relaunch it
+        timerLaunchAnimation.shutdown()
         timerLaunchAnimation = rospy.Timer(rospy.Duration(cBSI.periodAnimation), callback_timer_animation, oneshot=True)
-
-def callback_updateBSI(event):
-    cBSI.update_mood(event.current_expected, event.last_expected)
  
 
 if __name__ == "__main__":
@@ -116,41 +133,44 @@ if __name__ == "__main__":
     # create a unique node
     rospy.init_node("animations_manager")
 
-    # get all parameteres from launch file
-    NAO_IP = rospy.get_param('~nao_ip', '10.0.0.10')
-    PORT = rospy.get_param('~nao_port', "9559")
-    # topics name
-    TOPIC_ANIMATIONS = rospy.get_param('~topic_animations', 'topic_animations')
-    TOPIC_ACTIVITY = rospy.get_param('~topic_activity', 'state_activity')
-    TOPIC_POSES = rospy.get_param('~topic_poses', 'topic_poses')
-    TOPIC_SETTINGS = rospy.get_param('~topic_settings', 'topic_settings')
-    TOPIC_USER_FEEDBACK = rospy.get_param('~topic_user_feedback', 'user_feedback')
-    TOPIC_NB_REPETITION = rospy.get_param('~topic_nb_repetition', 'nb_repetition')
-
+    # get parameteres from launch file
+    NAO_IP = rospy.get_param('~nao_ip')
+    PORT = rospy.get_param('~nao_port')
+    # get value of parkinson scale
+    parkinson_scale = int(rospy.get_param('~parkinson_scale'))
+    # get robot's id
+    robotId = int(rospy.get_param('~id_robot'))
     # initial frequency at which animations are launch
-    periodAnimation = float(rospy.get_param('~periodAnimation', '10'))
-    periodAnimationMax = float(rospy.get_param('~periodAnimationMax', '10'))
-    periodUpdateTimerBSI = float(rospy.get_param('~periodUpdateTimerBSI', '0.1'))
-
-    # create animation class that will launch the animations
-    cNaoMotion = NaoMotion(NAO_IP, int(PORT))
+    periodUpdateTimerBSI = float(rospy.get_param('~periodUpdateTimerBSI'))
 
     # create the BSI class that will contain the behavior that the robot needs to show
-    cBSI = BSI(periodAnimation, periodAnimationMax)
+    cBSI = BSI(parkinson_scale)
+    # create animation class that will launch the animations
+    cNaoMotion = NaoMotion(NAO_IP, int(PORT), cBSI, robotId)
 
-    # subscribe to topics that send animations, poses and settings orders
-    rospy.Subscriber(TOPIC_ANIMATIONS, UInt8, callback_animations)
-    rospy.Subscriber(TOPIC_POSES, UInt8, callback_poses)
-    rospy.Subscriber(TOPIC_SETTINGS, UInt8, callback_settings)
-    rospy.Subscriber(TOPIC_USER_FEEDBACK, String, callback_user_feedback)
-
-    # subscribe to topic regarding the state machine
+    # subscribers
+    TOPIC_ANIMATIONS = rospy.get_param('~topic_animations')
+    rospy.Subscriber(TOPIC_ANIMATIONS, UInt8, TOp_callback_animations)
+    TOPIC_POSES = rospy.get_param('~topic_poses')
+    rospy.Subscriber(TOPIC_POSES, UInt8, TOp_callback_poses)
+    TOPIC_SETTINGS = rospy.get_param('~topic_settings')
+    rospy.Subscriber(TOPIC_SETTINGS, UInt8, TOp_callback_settings)
+    TOPIC_ACTIVITY = rospy.get_param('~topic_activity')
     rospy.Subscriber(TOPIC_ACTIVITY, String, callback_activityRobot)
+
+    # debug topic
+    debug = rospy.Publisher("debug", String, queue_size=10)
+
+    # give time for rospy to connect
+    rospy.sleep(1)
+    debug.publish("hehioheofh")
+
+    # launch timer for animations
+    if cBSI.periodAnimation != None:
+        timerLaunchAnimation = rospy.Timer(rospy.Duration(cBSI.periodAnimation), callback_timer_animation)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
-
-
 
 
 

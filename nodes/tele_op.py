@@ -45,8 +45,6 @@ def talker():
 		elif mode == "setting":
 			cmd_publisher_settings.publish(arg)
 
-
-
 if __name__ == '__main__':
 	talker()
 
