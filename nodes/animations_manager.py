@@ -67,18 +67,6 @@ def callback_activityRobot(data):
     state = str(data.data)
     global robotBusy
 
-    # if state == "INTRODUCTION" or state == "WAITING_FOR_WORD":
-    #     if cNaoMotion.get_posture() == "Crouch":
-    #         # the robot needs to stand up in order to launch animations
-    #         cNaoMotion.stand()
-
-    #     # wait until the robot stops moving
-    #     while cNaoMotion.isMoving():
-    #         rospy.sleep(0.1)
-
-    #     # make the robot introduce himself
-    #     cNaoMotion.introduceHimself()
-
     if state == "WAITING_FOR_FEEDBACK" or state == "WAITING_FOR_WORD":
         if cNaoMotion.get_posture() == "Crouch":
             # the robot needs to stand up in order to launch animations
@@ -163,7 +151,6 @@ if __name__ == "__main__":
 
     # give time for rospy to connect
     rospy.sleep(1)
-    debug.publish("hehioheofh")
 
     # launch timer for animations
     if cBSI.periodAnimation != None:

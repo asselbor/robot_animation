@@ -96,7 +96,11 @@ class NaoMotion():
 		self.motionProxy = ALProxy("ALMotion", NAO_IP, PORT)
 		self.audioProxy = ALProxy("ALAudioPlayer", NAO_IP, PORT)
 		self.postureProxy = ALProxy("ALRobotPosture", NAO_IP, PORT)
-		self.faceDetectionProxy = ALProxy("ALBasicAwareness", NAO_IP, PORT)
+		self.faceDetectionProxy = None
+
+		if NAO_IP != "127.0.0.1":
+			self.faceDetectionProxy = ALProxy("ALBasicAwareness", NAO_IP, PORT)
+
 		self.textSpeakProxy = ALProxy("ALTextToSpeech", NAO_IP, PORT)
 		
 
@@ -496,11 +500,12 @@ class NaoMotion():
 			self.motionProxy.setBreathEnabled("Body", False)
 
 	def faceFolowing(self, state):
-
-		if state == True:
-			self.faceDetectionProxy.startAwareness()
-		else:
-			self.faceDetectionProxy.stopAwareness()
+		
+		if self.faceDetectionProxy != None:
+			if state == True:
+				self.faceDetectionProxy.startAwareness()
+			else:
+				self.faceDetectionProxy.stopAwareness()
 
 	def rest(self):
 
